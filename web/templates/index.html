@@ -673,7 +673,7 @@
     <header class="hero">
       <div class="brand">【国信资配 - 开言畅谈】</div>
       <h1>ESG 研究辅助工具</h1>
-      <p class="subtitle">一键生成周报（上周一至上周日）或日报（昨日），输出 Word、JSON 与原始内容；文件名日期在前，便于归档。</p>
+      <p class="subtitle">智能聚合全网资讯，一键生成 ESG 投研日报/周报。支持自动归档与 Word 格式导出，助您高效捕捉市场动态。</p>
     </header>
 
     <div id="configAlert" class="alert warning" style="display: none;"></div>
@@ -696,7 +696,7 @@
       </div>
       <div class="mode-group" id="apiKeyGroupQwen">
         <span class="mode-label">千问 API Key</span>
-        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="请输入千问 API Key（可选，不填则使用 config.json）" autocomplete="off">
+        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="请输入千问 API Key（可选）" autocomplete="off">
       </div>
       <div class="mode-group" id="apiKeyGroupGemini" style="display: none;">
         <span class="mode-label">Gemini API Key（E / S / G 各一个，用于并行研究）</span>
@@ -771,7 +771,8 @@
             <li><strong>日报</strong>：研究区间为昨日（当前日期的前一天），输出至 <code>output/daily/</code>。</li>
             <li>每次生成会得到三个文件：原始内容（.txt）、结构化报告（.json）、Word 最终版（.docx），文件名均以日期开头。</li>
             <li>生成过程中请勿关闭页面；完成后可直接在下方下载，或到对应目录查看。</li>
-            <li><strong>API Key</strong>：选择模型后在上方输入。Gemini 需填写 E、S、G 三个 Key（用于并行研究）；千问只需一个。仅用于当次运行、不会保存；不填则使用 config.json 中已配置的 Key。</li>
+            <li><strong>API Key</strong>：选择模型后在上方输入。Gemini 需填写 E、S、G 三个 Key（用于并行研究）；千问只需一个。仅用于当次运行、不会保存。</li>
+            <li>为获得更优质的研报内容与深度分析，推荐优先使用 Gemini 进行研究辅助。</li>
           </ul>
         </div>
       </div>
@@ -802,11 +803,11 @@
     const apiKeyG = document.getElementById('apiKeyG');
 
     const STAGE_ORDER = [
-      { id: 'stage1', label: 'Deep Research（E/S/G）' },
-      { id: 'stage2', label: '润色（E/S/G）' },
-      { id: 'stage3', label: '热点聚焦' },
-      { id: 'stage4', label: '合并报告' },
-      { id: 'stage5', label: 'Word 填充' }
+      { id: 'stage1', label: '全网深度检索' },
+      { id: 'stage2', label: '核心观点提炼' },
+      { id: 'stage3', label: '市场热点聚焦' },
+      { id: 'stage4', label: '综合研报汇总' },
+      { id: 'stage5', label: '文档排版生成' }
     ];
 
     let pollTimer = null;
@@ -1054,7 +1055,7 @@
         const ok = available.indexOf(radio.value) !== -1;
         radio.disabled = !ok;
         label.style.opacity = ok ? '' : '0.6';
-        label.title = ok ? '' : '未在 config.json 中配置该服务的 API Key';
+        label.title = ok ? '' : '该服务暂未配置 API Key';
       });
     }
 
