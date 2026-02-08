@@ -35,32 +35,36 @@ def safe_print(*args, **kwargs):
 
 def load_config(provider_override=None, api_key_override=None):
     """
-    从配置文件加载配置。
+    从配置文件加载配置；无 config.json 时仅从环境变量（ESG_RUNTIME_API_KEY 等）构建配置。
     provider_override: 可选 "gemini" | "qwen"，覆盖 config 中的 provider。
     api_key_override: 可选，前端或环境传入的 API Key（ESG_RUNTIME_API_KEY），优先于 config 使用。
     """
     config_path = "config.json"
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(
-            f"配置文件 {config_path} 不存在。请复制 config.json.example 为 config.json。"
-        )
-
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = json.load(f)
-
-    # 支持嵌套结构 gemini / qwen，与旧版平铺键兼容
-    def _g(key, default=None):
-        return config.get(key, default)
-    # 从嵌套或平铺读取：Gemini 用 api_key / api_keys / agent / model，千问用 qwen_api_key / qwen_model / qwen_deep_research_model
-    _gemini = config.get("gemini") if isinstance(config.get("gemini"), dict) else {}
-    _qwen = config.get("qwen") if isinstance(config.get("qwen"), dict) else {}
-    config.setdefault("api_key", _gemini.get("api_key") or _g("api_key"))
-    config.setdefault("api_keys", _gemini.get("api_keys") or _g("api_keys"))
-    config.setdefault("agent", _gemini.get("agent") or _g("agent", "deep-research-pro-preview-12-2025"))
-    config.setdefault("model", _gemini.get("model") or _g("model", "gemini-3-pro-preview"))
-    config.setdefault("qwen_api_key", _qwen.get("api_key") or _g("qwen_api_key"))
-    config.setdefault("qwen_model", _qwen.get("model") or _g("qwen_model", "qwen3-max-preview"))
-    config.setdefault("qwen_deep_research_model", _qwen.get("deep_research_model") or _g("qwen_deep_research_model", "qwen-deep-research"))
+    if os.path.exists(config_path):
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        def _g(key, default=None):
+            return config.get(key, default)
+        _gemini = config.get("gemini") if isinstance(config.get("gemini"), dict) else {}
+        _qwen = config.get("qwen") if isinstance(config.get("qwen"), dict) else {}
+        config.setdefault("api_key", _gemini.get("api_key") or _g("api_key"))
+        config.setdefault("api_keys", _gemini.get("api_keys") or _g("api_keys"))
+        config.setdefault("agent", _gemini.get("agent") or _g("agent", "deep-research-pro-preview-12-2025"))
+        config.setdefault("model", _gemini.get("model") or _g("model", "gemini-3-pro-preview"))
+        config.setdefault("qwen_api_key", _qwen.get("api_key") or _g("qwen_api_key"))
+        config.setdefault("qwen_model", _qwen.get("model") or _g("qwen_model", "qwen3-max-preview"))
+        config.setdefault("qwen_deep_research_model", _qwen.get("deep_research_model") or _g("qwen_deep_research_model", "qwen-deep-research"))
+    else:
+        # 无 config.json 时使用默认值，Key 仅从环境变量读取（由前端经 app 传入）
+        config = {
+            "api_key": None,
+            "api_keys": None,
+            "agent": "deep-research-pro-preview-12-2025",
+            "model": "gemini-3-pro-preview",
+            "qwen_api_key": None,
+            "qwen_model": "qwen3-max-preview",
+            "qwen_deep_research_model": "qwen-deep-research",
+        }
 
     provider = provider_override or config.get("provider", "gemini")
     if provider not in ("gemini", "qwen"):

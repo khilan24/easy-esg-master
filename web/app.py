@@ -216,45 +216,47 @@ def _check_config(provider=None, api_key_override=None, api_keys_override=None):
     api_key_override: 前端传入的单个 API Key（千问或 Gemini 通用）。
     api_keys_override: 前端传入的 Gemini E/S/G 三个 Key，dict {"E","S","G"}。
     返回 (ok, message, extra)。extra 可含 provider、available_providers。
+    无 config.json 时仅根据前端传入的 Key 校验，有则合并文件与前端 Key。
     """
     cfg = PROJECT_ROOT / "config.json"
-    if not cfg.exists():
-        return False, "未找到 config.json，请复制 config.json.example 为 config.json。", {}
-    try:
-        with open(cfg, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        available = []
-        gemini_block = data.get("gemini") if isinstance(data.get("gemini"), dict) else {}
-        qwen_block = data.get("qwen") if isinstance(data.get("qwen"), dict) else {}
-        api_key = data.get("api_key") or gemini_block.get("api_key") or (data.get("api_keys") or gemini_block.get("api_keys") or {}).get("E")
-        if api_key and str(api_key).strip() and not str(api_key).startswith("YOUR_"):
-            available.append("gemini")
-        qwen_key = data.get("qwen_api_key") or qwen_block.get("api_key") or os.environ.get("DASHSCOPE_API_KEY") or ""
-        if qwen_key and str(qwen_key).strip() and not str(qwen_key).startswith("YOUR_"):
-            available.append("qwen")
-        # 前端传入的 Key 视为已配置
-        if api_key_override and str(api_key_override).strip():
-            if provider == "qwen" and "qwen" not in available:
-                available.append("qwen")
-        if api_keys_override and isinstance(api_keys_override, dict):
-            e, s, g = (api_keys_override.get("E") or "").strip(), (api_keys_override.get("S") or "").strip(), (api_keys_override.get("G") or "").strip()
-            if e and s and g and provider == "gemini" and "gemini" not in available:
+    available = []
+
+    if cfg.exists():
+        try:
+            with open(cfg, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            gemini_block = data.get("gemini") if isinstance(data.get("gemini"), dict) else {}
+            qwen_block = data.get("qwen") if isinstance(data.get("qwen"), dict) else {}
+            api_key = data.get("api_key") or gemini_block.get("api_key") or (data.get("api_keys") or gemini_block.get("api_keys") or {}).get("E")
+            if api_key and str(api_key).strip() and not str(api_key).startswith("YOUR_"):
                 available.append("gemini")
-        if provider == "gemini":
-            if "gemini" not in available:
-                return False, "请在上方输入 Gemini 的 E、S、G 三个 API Key，或在 config.json 中配置。", {"available_providers": available}
-            return True, "", {"provider": "gemini", "available_providers": available}
-        if provider == "qwen":
-            if "qwen" not in available:
-                return False, "请在上方输入千问 API Key，或在 config.json 中配置 qwen_api_key。", {"available_providers": available}
-            return True, "", {"provider": "qwen", "available_providers": available}
-        if provider is not None:
-            return False, "不支持的 provider，请使用 gemini 或 qwen。", {}
-        if not available:
-            return False, "请在上方输入 API Key，或至少在 config.json 中配置 Gemini / 千问 之一。", {}
-        return True, "", {"available_providers": available}
-    except Exception as e:
-        return False, str(e), {}
+            qwen_key = data.get("qwen_api_key") or qwen_block.get("api_key") or os.environ.get("DASHSCOPE_API_KEY") or ""
+            if qwen_key and str(qwen_key).strip() and not str(qwen_key).startswith("YOUR_"):
+                available.append("qwen")
+        except Exception as e:
+            return False, str(e), {}
+
+    # 前端传入的 Key 视为已配置（无 config 时也仅靠此处构建 available）
+    if api_key_override and str(api_key_override).strip() and "qwen" not in available:
+        available.append("qwen")
+    if api_keys_override and isinstance(api_keys_override, dict):
+        e, s, g = (api_keys_override.get("E") or "").strip(), (api_keys_override.get("S") or "").strip(), (api_keys_override.get("G") or "").strip()
+        if e and s and g and "gemini" not in available:
+            available.append("gemini")
+
+    if provider == "gemini":
+        if "gemini" not in available:
+            return False, "请在上方输入 Gemini 的 E、S、G 三个 API Key，或在 config.json 中配置。", {"available_providers": available}
+        return True, "", {"provider": "gemini", "available_providers": available}
+    if provider == "qwen":
+        if "qwen" not in available:
+            return False, "请在上方输入千问 API Key，或在 config.json 中配置 qwen_api_key。", {"available_providers": available}
+        return True, "", {"provider": "qwen", "available_providers": available}
+    if provider is not None:
+        return False, "不支持的 provider，请使用 gemini 或 qwen。", {}
+    if not available:
+        return False, "请在上方输入 API Key，或至少在 config.json 中配置 Gemini / 千问 之一。", {}
+    return True, "", {"available_providers": available}
 
 
 @app.route("/")
