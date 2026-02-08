@@ -1,0 +1,11 @@
+# Render 部署配置：GitHub + Render 免费托管
+# 文档: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: esg-research-tool
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 1 -b 0.0.0.0:$PORT web.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
