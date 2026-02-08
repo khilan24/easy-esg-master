@@ -63,14 +63,6 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None):
             PROGRESS_FILE.unlink()
     except Exception:
         pass
-    
-    # 确保状态为idle时清除进度显示
-    with _state_lock:
-        _state["status"] = "idle"
-        _state["message"] = ""
-        _state["log_tail"] = []
-        _state["output_files"] = []
-        _state["last_report_label"] = None
 
     cmd = [sys.executable, "main.py", "--mode", mode]
     if provider in ("gemini", "qwen"):
