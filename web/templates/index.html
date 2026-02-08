@@ -434,6 +434,16 @@
 
     .btn:active { transform: translateY(0); }
     .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+    .btn-cancel {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-strong);
+    }
+    .btn-cancel:hover:not(:disabled) {
+      background: var(--error-soft);
+      color: var(--error);
+      border-color: var(--error);
+    }
 
     .spinner {
       display: inline-block;
@@ -732,6 +742,7 @@
       <div class="action-row">
         <div id="statusBadge" class="status-badge idle">就绪</div>
         <button id="btnRun" class="btn">生成报告</button>
+        <button id="btnCancel" class="btn btn-cancel" style="display: none;">中止本次生成</button>
       </div>
       <p id="statusMessage"></p>
       </div>
@@ -788,6 +799,7 @@
     const statusBadge = document.getElementById('statusBadge');
     const statusMessage = document.getElementById('statusMessage');
     const btnRun = document.getElementById('btnRun');
+    const btnCancel = document.getElementById('btnCancel');
     const logBox = document.getElementById('logBox');
     const configAlert = document.getElementById('configAlert');
     const downloadCard = document.getElementById('downloadCard');
@@ -913,10 +925,12 @@
         if (d.status === 'running') {
           btnRun.disabled = true;
           btnRun.innerHTML = '<span class="spinner"></span> 生成中…';
+          if (btnCancel) btnCancel.style.display = '';
           if (!pollTimer) pollTimer = setInterval(fetchStatus, 3000);
         } else {
           btnRun.disabled = false;
           btnRun.textContent = '生成报告';
+          if (btnCancel) btnCancel.style.display = 'none';
           if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
           if (elapsedTickTimer) { clearInterval(elapsedTickTimer); elapsedTickTimer = null; }
         }
@@ -981,7 +995,24 @@
         if (elapsedTickTimer) { clearInterval(elapsedTickTimer); elapsedTickTimer = null; }
         btnRun.disabled = false;
         btnRun.textContent = '生成报告';
+        if (btnCancel) btnCancel.style.display = 'none';
       }
+    }
+
+    if (btnCancel) {
+      btnCancel.addEventListener('click', async () => {
+        try {
+          const r = await fetch('/api/cancel', { method: 'POST' });
+          const d = await r.json();
+          if (d.ok) {
+            await fetchStatus();
+          } else {
+            alert(d.message || '取消失败');
+          }
+        } catch (e) {
+          alert('请求失败：' + e.message);
+        }
+      });
     }
 
     function getMode() {
