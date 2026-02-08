@@ -8,7 +8,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import threading
 
-OUTPUT_BASE = "output"
+# 支持 Web 多任务：环境变量 ESG_JOB_ID 存在时，输出到 output/<job_id>/，否则 output/
+_job_id = os.environ.get("ESG_JOB_ID", "")
+OUTPUT_BASE = os.path.join("output", _job_id) if _job_id else "output"
 
 # 线程锁用于打印
 print_lock = threading.Lock()

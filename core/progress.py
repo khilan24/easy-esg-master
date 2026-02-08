@@ -8,13 +8,15 @@ import os
 import time
 from pathlib import Path
 
-PROGRESS_FILE = os.path.join("output", ".progress.json")
+from core.utils import OUTPUT_BASE
+
+PROGRESS_FILE = os.path.join(OUTPUT_BASE, ".progress.json")
 
 _START_TIMES = {}  # stage_id -> start time
 
 
 def _ensure_output():
-    Path("output").mkdir(parents=True, exist_ok=True)
+    Path(OUTPUT_BASE).mkdir(parents=True, exist_ok=True)
 
 
 def write_progress(current_stage_id, current_stage_label, completed_stages=None):

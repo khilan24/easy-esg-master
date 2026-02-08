@@ -825,6 +825,7 @@
 
     let pollTimer = null;
     let elapsedTickTimer = null;
+    let currentJobId = null;
 
     function formatDuration(sec) {
       if (sec == null || isNaN(sec)) return '—';
@@ -904,8 +905,22 @@
     }
 
     async function fetchStatus() {
+      if (!currentJobId) {
+        setStatus('idle', '');
+        if (btnCancel) btnCancel.style.display = 'none';
+        return;
+      }
       try {
-        const r = await fetch('/api/status');
+        const r = await fetch('/api/status?job_id=' + encodeURIComponent(currentJobId));
+        if (r.status === 404 || r.status === 400) {
+          currentJobId = null;
+          setStatus('idle', '');
+          btnRun.disabled = false;
+          btnRun.textContent = '生成报告';
+          if (btnCancel) btnCancel.style.display = 'none';
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+          return;
+        }
         const d = await r.json();
         setStatus(d.status, d.message);
         if (d.log_tail && d.log_tail.length) {
@@ -1001,8 +1016,13 @@
 
     if (btnCancel) {
       btnCancel.addEventListener('click', async () => {
+        if (!currentJobId) return;
         try {
-          const r = await fetch('/api/cancel', { method: 'POST' });
+          const r = await fetch('/api/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: currentJobId })
+          });
           const d = await r.json();
           if (d.ok) {
             await fetchStatus();
@@ -1067,10 +1087,12 @@
           showConfigAlert(false, d.message);
           return;
         }
+        currentJobId = d.job_id || null;
         showConfigAlert(true);
         setStatus('running', d.message);
         btnRun.disabled = true;
         btnRun.innerHTML = '<span class="spinner"></span> 生成中…';
+        if (btnCancel) btnCancel.style.display = '';
         if (!pollTimer) pollTimer = setInterval(fetchStatus, 3000);
         fetchStatus();
       } catch (e) {
