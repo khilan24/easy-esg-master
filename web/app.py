@@ -94,6 +94,8 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None):
             errors="replace",
             env=env,
         )
+        with _state_lock:
+            _state["_proc"] = proc
         for line in proc.stdout:
             line = line.rstrip()
             # 清理可能的乱码字符（替换无法正确显示的字符）
@@ -107,24 +109,35 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None):
                 _state["log_tail"] = log_lines[-_log_tail_size:]
 
         proc.wait()
-        if proc.returncode != 0:
-            with _state_lock:
+        with _state_lock:
+            _state["_proc"] = None
+            if _state.get("cancelled"):
+                _state["status"] = "idle"
+                _state["message"] = "已取消生成"
+                _state["log_tail"] = log_lines[-_log_tail_size:]
+                del _state["cancelled"]
+                try:
+                    if PROGRESS_FILE.exists():
+                        PROGRESS_FILE.unlink()
+                except Exception:
+                    pass
+                return
+            if proc.returncode != 0:
                 _state["status"] = "error"
                 _state["message"] = f"生成失败，退出码 {proc.returncode}。请查看下方运行日志中的错误信息。"
                 _state["log_tail"] = log_lines[-_log_tail_size:]
-            # 任务失败后，清除进度文件
-            try:
-                if PROGRESS_FILE.exists():
-                    PROGRESS_FILE.unlink()
-            except Exception:
-                pass
-            return
+                try:
+                    if PROGRESS_FILE.exists():
+                        PROGRESS_FILE.unlink()
+                except Exception:
+                    pass
+                return
     except Exception as e:
         with _state_lock:
+            _state["_proc"] = None
             _state["status"] = "error"
             _state["message"] = str(e)
             _state["log_tail"] = (log_lines[-_log_tail_size:] if log_lines else _state.get("log_tail", []))[-_log_tail_size:]
-        # 任务异常后，清除进度文件
         try:
             if PROGRESS_FILE.exists():
                 PROGRESS_FILE.unlink()
@@ -186,6 +199,7 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None):
                     files.append({"name": p.name, "path": p.name})
 
     with _state_lock:
+        _state["_proc"] = None
         _state["status"] = "done"
         if files:
             _state["message"] = f"报告已生成，可选择下载 TXT、JSON、Word 文件（共 {len(files)} 个文件）。"
@@ -193,7 +207,7 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None):
             _state["message"] = "报告已生成，但未找到输出文件。请检查 output 目录。"
         _state["output_files"] = files
         _state["log_tail"] = log_lines[-_log_tail_size:]
-    
+
     # 任务完成后，清除进度文件，下次启动时不会显示上次的运行时长
     try:
         if PROGRESS_FILE.exists():
@@ -321,6 +335,22 @@ def api_run():
     thread.start()
     label = REPORT_LABEL_BY_MODE.get(mode, "ESG投研周报")
     return jsonify({"ok": True, "message": f"已开始生成{label}", "provider": provider})
+
+
+@app.route("/api/cancel", methods=["POST"])
+def api_cancel():
+    """中止当前正在运行的生成任务"""
+    with _state_lock:
+        proc = _state.get("_proc")
+        if proc is None:
+            return jsonify({"ok": False, "message": "当前没有正在运行的任务"}), 400
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+        _state["cancelled"] = True
+        _state["_proc"] = None
+    return jsonify({"ok": True, "message": "已中止生成"})
 
 
 @app.route("/api/config-check")
