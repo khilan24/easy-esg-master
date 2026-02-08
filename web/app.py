@@ -60,7 +60,7 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None, job
             return
         j = _jobs[job_id]
         j["status"] = "running"
-        j["message"] = f"正在生成{report_label}（Deep Research → 润色 → 合并 → Word）…"
+        j["message"] = f"正在生成{report_label}（全网深度检索 → 核心观点提炼 → 市场热点聚焦 → 综合研报汇总 → 文档排版生成）…"
         j["log_tail"] = []
         j["output_files"] = []
         j["last_report_label"] = report_label
