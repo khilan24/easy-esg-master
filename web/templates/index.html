@@ -707,7 +707,7 @@
       </div>
       <div class="mode-group" id="apiKeyGroupQwen">
         <span class="mode-label">千问 API Key</span>
-        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="请输入千问 API Key（可选）" autocomplete="off">
+        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="请输入千问 API Key" autocomplete="off">
       </div>
       <div class="mode-group" id="apiKeyGroupGemini" style="display: none;">
         <span class="mode-label">Gemini API Key（E / S / G 各一个，用于并行研究）</span>
@@ -779,12 +779,12 @@
         <div class="card help-card">
           <h2 class="card-title">使用说明</h2>
           <ul>
+            <li>为获得更优质的研报内容与深度分析，推荐优先使用 Gemini 进行研究辅助。</li>
+            <li><strong>API Key</strong>：选择模型后在上方输入。Gemini 需填写 E、S、G 三个 Key（用于并行研究）；千问只需一个。仅用于当次运行、不会保存。</li>
             <li><strong>周报</strong>：研究区间为上周一至上周日，输出至 <code>output/weekly/</code>。</li>
             <li><strong>日报</strong>：研究区间为昨日（当前日期的前一天），输出至 <code>output/daily/</code>。</li>
             <li>每次生成会得到三个文件：原始内容（.txt）、结构化报告（.json）、Word 最终版（.docx），文件名均以日期开头。</li>
             <li>生成过程中请勿关闭页面；完成后可直接在下方下载，或到对应目录查看。</li>
-            <li><strong>API Key</strong>：选择模型后在上方输入。Gemini 需填写 E、S、G 三个 Key（用于并行研究）；千问只需一个。仅用于当次运行、不会保存。</li>
-            <li>为获得更优质的研报内容与深度分析，推荐优先使用 Gemini 进行研究辅助。</li>
           </ul>
         </div>
       </div>

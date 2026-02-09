@@ -264,7 +264,7 @@ def _check_config(provider=None, api_key_override=None, api_keys_override=None):
     if provider is not None:
         return False, "不支持的 provider，请使用 gemini 或 qwen。", {}
     if not available:
-        return False, "请在上方输入 API Key，或至少在 config.json 中配置 Gemini / 千问 之一。", {}
+        return False, "请在下方输入 API Key", {}
     return True, "", {"available_providers": available}
 
 
