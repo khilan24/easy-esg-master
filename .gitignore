@@ -24,6 +24,3 @@ output/
 
 # 临时文件
 temp_template_unpacked/
-
-# 可选：IDE 技能目录（与主程序无关，可删除以精简仓库）
-.cursor/skills/

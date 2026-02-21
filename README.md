@@ -140,12 +140,14 @@ easy-esg-master/
 │   ├── systemd/
 │   ├── nginx/
 │   └── scripts/
+├── .cursor/skills/          # Cursor IDE 技能（esg-report、frontend-design 等）
+├── render.yaml              # Render 云部署配置
 └── output/
     ├── weekly/             # 周报输出
     └── daily/              # 日报输出
 ```
 
-若存在 `.cursor/skills/`，为 Cursor IDE 技能与参考，与主程序无关；可手动删除该目录以精简仓库。
+`.cursor/skills/` 为 Cursor IDE 技能与参考，用于 AI 辅助开发，已纳入仓库。
 
 ## 部署（阿里云）
 

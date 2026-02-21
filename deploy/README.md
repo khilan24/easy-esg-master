@@ -55,7 +55,7 @@
    - **3.3 克隆项目并创建虚拟环境**：见 3.3（仓库公开，直接 clone 即可）。  
    - **跳过 3.4**：无需配置 config.json，用户在前端填 API Key。  
    - **3.5 测试运行**：见 3.5，确认 gunicorn 能跑。  
-   - **四、配置 systemd**：安装并启用 esg-app 服务，开机自启。  
+   - **四、配置 systemd**：安装并启用 esg-app 服务（**必须完成此项，应用才会一直运行**，否则 3.5 测试结束后进程会退出）。
    - **五、配置 Nginx**：按「若无域名、仅用 IP 访问」那一段，复制配置后执行 `sed` 把 `server_name` 改为 `_`，再 `nginx -t` 和 `reload nginx`。
 
 4. **验证**  
@@ -113,6 +113,8 @@
 ## 三、服务器环境（首次部署）
 
 以下以 **Ubuntu 24.04** 为例（与 Ubuntu 22.04 命令一致），使用 `root` 或具备 sudo 权限的账号 SSH 登录后执行。登录示例：`ssh root@139.196.89.245`（若使用密钥：`ssh -i 你的密钥.pem root@139.196.89.245`）。
+
+**说明**：本节只完成环境安装与一次性的「测试运行」；测试时 gunicorn 在前台运行，断开 SSH 或按 Ctrl+C 即停止。要让项目**一直在服务器上运行**，必须继续完成 **第四节（systemd）** 和 **第五节（Nginx）**。
 
 ### 3.1 安装依赖
 
@@ -204,14 +206,24 @@ sudo -u esg /home/esg/easy-esg/venv/bin/gunicorn -w 1 -b 127.0.0.1:5000 web.app:
    ```
    完成后可通过 **http://139.196.89.245** 访问。
 
-3. 检查并重载 Nginx：
+3. **若保留 Nginx 默认站点（不删 default）**：让 ESG 使用其他端口（如 8080），80 仍显示 “Welcome to nginx!”：
+
+   ```bash
+   sudo cp deploy/nginx/esg-8080.conf /etc/nginx/sites-available/esg
+   sudo ln -sf /etc/nginx/sites-available/esg /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+   - 访问 ESG：**http://139.196.89.245:8080**
+   - 阿里云安全组需放行 **8080**（入方向 TCP 8080）。
+
+4. 检查并重载 Nginx：
 
    ```bash
    sudo nginx -t
    sudo systemctl reload nginx
    ```
 
-此时应能通过 **http://你的域名** 或 **http://139.196.89.245** 访问。
+此时应能通过 **http://你的域名** 或 **http://139.196.89.245**（或使用 8080 方案时 **http://139.196.89.245:8080**）访问。
 
 ---
 
@@ -269,7 +281,8 @@ sudo systemctl restart esg-app
 | 路径 | 说明 |
 |------|------|
 | `deploy/systemd/esg-app.service` | systemd 服务单元模板，需替换项目目录与运行用户后复制到 `/etc/systemd/system/` |
-| `deploy/nginx/esg.conf` | Nginx 站点配置模板，需替换域名后复制到 `/etc/nginx/sites-available/` |
+| `deploy/nginx/esg.conf` | Nginx 站点配置模板（80 端口），需替换域名后复制到 `/etc/nginx/sites-available/` |
+| `deploy/nginx/esg-8080.conf` | Nginx 站点配置（8080 端口），与 default 共存，不占 80；安全组需放行 8080 |
 | `deploy/scripts/update.sh` | 服务器端一键更新脚本（git pull + 安装依赖 + 重启服务） |
 
 ---
