@@ -135,12 +135,21 @@ easy-esg-master/
 ├── web/
 │   ├── app.py              # Flask 后端（状态、进度、下载）
 │   └── templates/index.html
+├── deploy/                  # 阿里云部署（systemd、Nginx、更新脚本）
+│   ├── README.md            # 部署说明
+│   ├── systemd/
+│   ├── nginx/
+│   └── scripts/
 └── output/
     ├── weekly/             # 周报输出
     └── daily/              # 日报输出
 ```
 
 若存在 `.cursor/skills/`，为 Cursor IDE 技能与参考，与主程序无关；可手动删除该目录以精简仓库。
+
+## 部署（阿里云）
+
+若需在阿里云 ECS 上通过域名对外提供 Web 服务，参见 [deploy/README.md](deploy/README.md)。内含 systemd、Nginx 配置模板与一键更新脚本，版本迭代可通过 GitHub 拉取后执行 `deploy/scripts/update.sh` 完成。
 
 ## 注意事项
 

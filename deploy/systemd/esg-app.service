@@ -1,0 +1,21 @@
+# ESG 投研 Web 应用 - systemd 服务单元
+# 部署前请将下面的 /home/esg/easy-esg 改为实际项目目录，esg 改为实际运行用户，再执行：
+#   sudo cp deploy/systemd/esg-app.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable esg-app && sudo systemctl start esg-app
+
+[Unit]
+Description=ESG Research Web App (Flask + Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=esg
+Group=esg
+WorkingDirectory=/home/esg/easy-esg
+Environment="PATH=/home/esg/easy-esg/venv/bin"
+ExecStart=/home/esg/easy-esg/venv/bin/gunicorn -w 1 -b 127.0.0.1:5000 web.app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
