@@ -234,9 +234,9 @@ hotspot_result = client.call_model(prompt, "热点聚焦")
 ```
 easy-esg-master/
 ├── main.py                 # 主程序入口
-├── fill_template.py        # Word 填充命令行入口
-├── config.json.example     # 配置模板
-├── ESG研报模板.docx        # Word 模板
+├── scripts/fill_template.py # Word 填充命令行入口
+├── config/config.json.example
+├── templates/              # Word/PPT 模板
 ├── core/
 │   ├── __init__.py
 │   ├── gemini_client.py    # Gemini API 客户端
@@ -247,8 +247,9 @@ easy-esg-master/
 ├── report/
 │   ├── report_formatter.py # 报告解析与格式化
 │   └── report_saver.py     # JSON 保存
-├── word/
-│   └── word_filler.py      # Word 模板填充
+├── fill/                   # 模板填充（Word + PPT）
+│   ├── word_filler.py
+│   └── ppt_filler.py
 └── prompt/                 # 提示词模板
     ├── 章节研究.txt
     ├── 章节润色.txt

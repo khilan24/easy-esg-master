@@ -960,7 +960,8 @@
             const filesByType = {
               txt: [],
               json: [],
-              docx: []
+              docx: [],
+              pptx: []
             };
             d.output_files.forEach(f => {
               const name = f.name.toLowerCase();
@@ -970,6 +971,8 @@
                 filesByType.json.push(f);
               } else if (name.endsWith('.docx')) {
                 filesByType.docx.push(f);
+              } else if (name.endsWith('.pptx')) {
+                filesByType.pptx.push(f);
               }
             });
             
@@ -992,6 +995,13 @@
             if (filesByType.docx.length > 0) {
               html += '<div class="download-group"><div class="download-type-label">📝 Word 最终版（DOCX）</div>';
               filesByType.docx.forEach(f => {
+                html += '<a href="/api/download/' + encodeURIComponent(f.path) + '" download class="download-link">' + escapeHtml(f.name) + '</a>';
+              });
+              html += '</div>';
+            }
+            if (filesByType.pptx.length > 0) {
+              html += '<div class="download-group"><div class="download-type-label">📊 PPT 最终版（PPTX）</div>';
+              filesByType.pptx.forEach(f => {
                 html += '<a href="/api/download/' + encodeURIComponent(f.path) + '" download class="download-link">' + escapeHtml(f.name) + '</a>';
               });
               html += '</div>';

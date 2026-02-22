@@ -5,7 +5,7 @@ ESG 投研报告全流程入口（在项目根目录运行）
 1. 从 skill 的 assets 同步模板、提示词、config 示例到项目（若缺失）
 2. 运行项目 main.py：Deep Research(E/S/G) → 润色 → 热点聚焦 → 合并 → 保存 JSON → 填充 Word
 支持 --mode weekly（周报，上周）或 --mode daily（日报，昨日）。默认 weekly。
-若不在项目根目录，会提示在 easy-esg-master 根目录运行或单独使用 fill_word.py。
+若不在项目根目录，会提示在 easy-esg-master 根目录运行或单独使用 scripts/fill_template.py。
 """
 import argparse
 import os
@@ -73,7 +73,7 @@ def main():
         print("当前目录不是 easy-esg-master 项目根（缺少 main.py 或 core/）。", file=sys.stderr)
         print("请：", file=sys.stderr)
         print("  1. 在项目根目录下运行本脚本：python .cursor/skills/esg-report/scripts/run_report.py [--mode weekly|daily]", file=sys.stderr)
-        print("  2. 或先运行 main.py 生成 JSON，再用 scripts/fill_word.py 填充 Word。", file=sys.stderr)
+        print("  2. 或先运行 main.py 生成 JSON，再用 scripts/fill_template.py 填充 Word。", file=sys.stderr)
         return 1
 
     synced = _sync_assets_to_project(cwd)

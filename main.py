@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import traceback
+from pathlib import Path
 
 from core import (
     load_config,
@@ -27,7 +28,7 @@ from core.progress import (
     write_progress_error,
 )
 from report import save_raw_content, save_formatted_report
-from word import fill_word_template
+from fill import fill_word_template, fill_ppt_template
 
 
 def main():
@@ -92,8 +93,8 @@ def main():
         current_stage_id, current_stage_label = "stage4", "合并报告"
         final_result = pipeline.stage4_merge(polished_results, hotspot_result, date_info)
         completed_stages = end_stage("stage4", "合并报告", completed_stages)
-        write_progress("stage5", "Word 填充", completed_stages)
-        start_stage("stage5", "Word 填充")
+        write_progress("stage5", "Word 与 PPT 填充", completed_stages)
+        start_stage("stage5", "Word 与 PPT 填充")
 
         raw_filename = save_raw_content(final_result, hotspot_result, polished_results, date_info)
         agent = "qwen-deep-research" if provider == "qwen" else config.get("agent", "deep-research-pro-preview-12-2025")
@@ -127,34 +128,52 @@ def main():
         date_suffix = get_output_date_suffix(date_info)
         os.makedirs(word_output_dir, exist_ok=True)
         safe_print("\n" + "=" * 60)
-        safe_print("阶段5：填充 Word 模板")
+        safe_print("阶段5：填充 Word 与 PPT 模板")
         safe_print("=" * 60)
         try:
+            word_tpl = Path("templates/ESG研报模板.docx")
+            if not word_tpl.exists():
+                word_tpl = Path("ESG研报模板.docx")
             fill_success, word_output = fill_word_template(
                 json_path=formatted_filename,
-                template_path="ESG研报模板.docx",
+                template_path=str(word_tpl),
                 output_path=os.path.join(word_output_dir, f"{date_suffix}_最终版.docx"),
             )
+            ppt_success, ppt_output = False, None
+            ppt_template = Path("templates/ESG研报模板.pptx") if Path("templates/ESG研报模板.pptx").exists() else Path("ESG研报模板.pptx")
+            if ppt_template.exists():
+                ppt_success, ppt_output = fill_ppt_template(
+                    json_path=formatted_filename,
+                    template_path=str(ppt_template),
+                    output_path=os.path.join(word_output_dir, f"{date_suffix}_最终版.pptx"),
+                )
+            else:
+                safe_print(f"\n[跳过] PPT 模板不存在 ({ppt_template})，仅生成 Word")
+
             if fill_success:
-                completed_stages = end_stage("stage5", "Word 填充", completed_stages)
+                completed_stages = end_stage("stage5", "Word 与 PPT 填充", completed_stages)
                 write_progress_done(completed_stages)
                 safe_print(f"\n[成功] Word 文档：{word_output}")
+                if ppt_success:
+                    safe_print(f"[成功] PPT 文档：{ppt_output}")
                 safe_print("\n" + "=" * 60)
                 safe_print("全部流程完成！")
                 safe_print("=" * 60)
                 safe_print(f"[完成] 原始内容: {raw_filename}")
                 safe_print(f"[完成] JSON 报告: {formatted_filename}")
                 safe_print(f"[完成] Word 文档: {word_output}")
+                if ppt_success:
+                    safe_print(f"[完成] PPT 文档: {ppt_output}")
             else:
-                completed_stages = end_stage("stage5", "Word 填充", completed_stages)
+                completed_stages = end_stage("stage5", "Word 与 PPT 填充", completed_stages)
                 write_progress_done(completed_stages)
                 safe_print("\n[警告] Word 填充失败，JSON 已生成")
-                safe_print(f"可手动运行: python fill_template.py --json {formatted_filename}")
+                safe_print(f"可手动运行: python scripts/fill_template.py --json {formatted_filename}")
         except Exception as e:
-            completed_stages = end_stage("stage5", "Word 填充", completed_stages)
-            write_progress_error(completed_stages, "stage5", "Word 填充")
-            safe_print(f"\n[警告] Word 填充出错: {e}")
-            safe_print("JSON 已生成，可稍后运行 fill_template.py 填充")
+            completed_stages = end_stage("stage5", "Word 与 PPT 填充", completed_stages)
+            write_progress_error(completed_stages, "stage5", "Word 与 PPT 填充")
+            safe_print(f"\n[警告] 填充出错: {e}")
+            safe_print("JSON 已生成，可稍后运行 scripts/fill_template.py 填充")
             print(traceback.format_exc(), flush=True)
 
     except Exception as e:

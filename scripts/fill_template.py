@@ -5,21 +5,21 @@
 支持周报/日报 JSON，自动查找最新或指定 JSON 并填充 Word。
 """
 import sys
-from word.word_filler import fill_word_template
+from fill import fill_word_template
 
 
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="填充 Word 模板（周报/日报 JSON）")
-    parser.add_argument("--template", "-t", default="ESG研报模板.docx", help="Word 模板路径")
+    parser.add_argument("--template", "-t", default=None, help="Word 模板路径（默认 templates/ESG研报模板.docx 或根目录）")
     parser.add_argument("--json", "-j", default=None, help="JSON 报告路径（默认自动查找最新 ESG投研*_*.json）")
     parser.add_argument("--output", "-o", default=None, help="输出 docx 路径（默认根据 JSON 推断）")
     args = parser.parse_args()
 
     success, _ = fill_word_template(
         json_path=args.json,
-        template_path=args.template,
+        template_path=args.template or None,
         output_path=args.output,
     )
     return success

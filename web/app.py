@@ -168,9 +168,10 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None, job
         if subdir:
             for name, rel_path in list_output_files_in_subdir(subdir, base_dir):
                 is_docx = (name.endswith("_最终版.docx") or (name.startswith("最终版") and name.endswith(".docx")))
+                is_pptx = (name.endswith("_最终版.pptx") or (name.startswith("最终版") and name.endswith(".pptx")))
                 is_json = (name.endswith("_报告.json") or (name.startswith("报告") and name.endswith(".json")) or (name.endswith(".json") and "_报告" in name))
                 is_txt = (name.endswith("_原始内容.txt") or (name.startswith("原始内容") and name.endswith(".txt")) or (name.endswith(".txt") and "_原始内容" in name))
-                if is_docx or is_json or is_txt:
+                if is_docx or is_pptx or is_json or is_txt:
                     # 下载路径：带 job_id 前缀，便于 /api/download 解析
                     path_for_download = f"{job_id}/{rel_path}" if job_id else rel_path
                     files.append({"name": name, "path": path_for_download})
@@ -180,6 +181,7 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None, job
                 if subdir_path.exists() and subdir_path.is_dir():
                     for pattern, check_func in [
                         ("*_最终版.docx", lambda n: n.endswith("_最终版.docx") or (n.startswith("最终版") and n.endswith(".docx"))),
+                        ("*_最终版.pptx", lambda n: n.endswith("_最终版.pptx") or (n.startswith("最终版") and n.endswith(".pptx"))),
                         ("*_报告.json", lambda n: n.endswith("_报告.json") or (n.startswith("报告") and n.endswith(".json")) or ("_报告" in n and n.endswith(".json"))),
                         ("*_原始内容.txt", lambda n: n.endswith("_原始内容.txt") or (n.startswith("原始内容") and n.endswith(".txt")) or ("_原始内容" in n and n.endswith(".txt"))),
                     ]:
@@ -197,7 +199,7 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None, job
                     subdir_path = base_dir / subdir_name
                     if not subdir_path.is_dir():
                         continue
-                    for suffix in ["_最终版.docx", "_报告.json", "_原始内容.txt"]:
+                    for suffix in ["_最终版.docx", "_最终版.pptx", "_报告.json", "_原始内容.txt"]:
                         for p in sorted(subdir_path.glob(f"*{suffix}"), key=lambda x: x.stat().st_mtime, reverse=True)[:1]:
                             if p.is_file():
                                 rel_path = f"{subdir_name}/{p.name}"
@@ -209,7 +211,7 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None, job
         if job_id in _jobs:
             _jobs[job_id]["_proc"] = None
             _jobs[job_id]["status"] = "done"
-            _jobs[job_id]["message"] = f"报告已生成，可选择下载 TXT、JSON、Word 文件（共 {len(files)} 个文件）。" if files else "报告已生成，但未找到输出文件。请检查 output 目录。"
+            _jobs[job_id]["message"] = f"报告已生成，可选择下载 TXT、JSON、Word、PPT 文件（共 {len(files)} 个文件）。" if files else "报告已生成，但未找到输出文件。请检查 output 目录。"
             _jobs[job_id]["output_files"] = files
             _jobs[job_id]["log_tail"] = log_lines[-_log_tail_size:]
     try:

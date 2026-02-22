@@ -9,7 +9,7 @@
 - **入口**：用户通过浏览器访问 Web 前端（Flask 提供 `web/app.py` + `templates/index.html`）。
 - **API Key**：前端页面提供模型选择（Gemini / 千问）与 **API Key 输入框**；用户填写后点击「生成报告」，前端通过 POST `/api/run` 将 `api_key` / `api_keys` 传给后端。
 - **后端**：Flask 收到请求后，将 Key 注入环境变量（`ESG_RUNTIME_API_KEY`、`ESG_RUNTIME_API_KEY_E/S/G`），再以子进程方式启动 `main.py`；`main.py` 内 `load_config()` 优先从环境变量读取 Key，**无 config.json 也可正常运行**。
-- **流程**：`main.py` 调用 `core/research_stages.py` 的 ResearchPipeline，依次执行 E/S/G 深度研究 → 润色 → 热点聚焦 → 合并 → Word 填充；结果写入 `output/<job_id>/weekly|daily/`，前端轮询 `/api/status` 展示进度与日志，并提供下载。
+- **流程**：`main.py` 调用 `core/research_stages.py` 的 ResearchPipeline，依次执行 E/S/G 深度研究 → 润色 → 热点聚焦 → 合并 → Word 与 PPT 填充；结果写入 `output/<job_id>/weekly|daily/`，前端轮询 `/api/status` 展示进度与日志，并提供下载。
 - **结论**：部署时**无需**在服务器上创建 `config.json`；用户在前端输入 API Key 即可。仅当需要服务端默认 Key 或默认模型时可选用 config.json。
 
 ---
@@ -33,7 +33,7 @@
 | **阿里云 ECS** | SSH 登录方式（密码或密钥） |
 | **部署路径** | 服务器上项目目录（建议直接用 `/home/esg/easy-esg`） |
 | **运行用户** | 用于运行应用的系统用户（建议直接用 `esg`） |
-| **域名** | 用于访问的域名；**若无域名可暂用 IP**：http://139.196.89.245 |
+| **域名** | 用于访问的域名；**若无域名可暂用 IP**：http://139.196.89.245:8080 |
 | **API Key** | **无需在服务器配置**：网站前端已包含 API Key 输入框，用户访问页面时填写即可 |
 
 ---
@@ -42,7 +42,7 @@
 
 1. **阿里云控制台**  
    - 登录 [阿里云 ECS 控制台](https://ecs.console.aliyun.com)，找到实例 **139.196.89.245**。  
-   - 进入该实例的 **安全组**，放行入方向：**22**（SSH）、**80**（HTTP）、**443**（HTTPS）。
+   - 进入该实例的 **安全组**，放行入方向：**22**（SSH）、**8080**（ESG Web）。
 
 2. **本机 SSH 登录 ECS**  
    - 在本地终端执行：`ssh root@139.196.89.245`  
@@ -56,10 +56,10 @@
    - **跳过 3.4**：无需配置 config.json，用户在前端填 API Key。  
    - **3.5 测试运行**：见 3.5，确认 gunicorn 能跑。  
    - **四、配置 systemd**：安装并启用 esg-app 服务（**必须完成此项，应用才会一直运行**，否则 3.5 测试结束后进程会退出）。
-   - **五、配置 Nginx**：按「若无域名、仅用 IP 访问」那一段，复制配置后执行 `sed` 把 `server_name` 改为 `_`，再 `nginx -t` 和 `reload nginx`。
+   - **五、配置 Nginx**：复制 `deploy/nginx/esg.conf` 到 sites-available，启用并重载 Nginx。
 
 4. **验证**  
-   - 在浏览器打开 **http://139.196.89.245**，应能看到 ESG 工具页面；选择模型、填写 API Key 后点击「生成报告」即可使用。
+   - 在浏览器打开 **http://139.196.89.245:8080**，应能看到 ESG 工具页面；选择模型、填写 API Key 后点击「生成报告」即可使用。
 
 5. **后续更新**  
    - 代码更新后，在服务器上进入 `/home/esg/easy-esg`，执行 `./deploy/scripts/update.sh`（或按「七、后续版本迭代」手动执行）。
@@ -97,15 +97,15 @@
   - **备案**：域名若在中国大陆且用国内 ECS，需在阿里云备案中心完成 ICP 备案后才能用域名访问；仅用 IP 访问则不需要备案。
 
 - **API Key（无需在服务器配置）**  
-  - **说明**：本项目的 **Web 前端已包含 API Key 输入窗口**。用户打开部署后的网站（如 http://139.196.89.245），在页面上选择模型（Gemini 或千问）并填写对应 API Key，点击「生成报告」即可，**无需在服务器上创建或填写 config.json**。后端会通过请求体接收前端传入的 Key，并注入到运行环境中供主流程使用。  
+  - **说明**：本项目的 **Web 前端已包含 API Key 输入窗口**。用户打开部署后的网站（如 http://139.196.89.245:8080），在页面上选择模型（Gemini 或千问）并填写对应 API Key，点击「生成报告」即可，**无需在服务器上创建或填写 config.json**。后端会通过请求体接收前端传入的 Key，并注入到运行环境中供主流程使用。  
   - **可选**：若你希望设置**默认模型**或**服务端默认 Key**（例如不希望在页面暴露 Key、仅内网使用），可在服务器上按「3.4 配置 config.json（可选）」创建 `config.json`；此时前端仍可覆盖该配置。Key 来源：Gemini 在 Google AI Studio，千问在阿里云 DashScope/灵积控制台。
 
 ---
 
 ## 二、阿里云控制台准备
 
-1. **安全组**：放行 **22**（SSH）、**80**（HTTP）、**443**（HTTPS）。
-2. **域名解析**：在域名服务商处添加 **A 记录**，将域名指向 ECS 公网 IP。
+1. **安全组**：放行 **22**（SSH）、**8080**（ESG Web）。
+2. **域名解析**（可选）：若有域名，在域名服务商处添加 **A 记录**，将域名指向 ECS 公网 IP；访问时使用 `http://域名:8080`。
 3. **备案**：若使用中国大陆 ECS 且通过域名访问，需完成 ICP 备案。
 
 ---
@@ -151,7 +151,7 @@ sudo -u esg /home/esg/easy-esg/venv/bin/pip install gunicorn
 **默认无需执行**：用户在前端页面填写 API Key 即可。仅当需要服务端默认模型或默认 Key 时，在服务器上创建 `config.json`：
 
 ```bash
-sudo -u esg cp /home/esg/easy-esg/config.json.example /home/esg/easy-esg/config.json
+sudo -u esg cp /home/esg/easy-esg/config/config.json.example /home/esg/easy-esg/config.json
 sudo -u esg nano /home/esg/easy-esg/config.json
 ```
 
@@ -186,57 +186,22 @@ sudo -u esg /home/esg/easy-esg/venv/bin/gunicorn -w 1 -b 127.0.0.1:5000 web.app:
 
 ---
 
-## 五、配置 Nginx 反向代理（域名访问）
+## 五、配置 Nginx 反向代理（8080 端口）
 
-1. 编辑站点配置，将 **你的域名.com** 改为实际域名：
+```bash
+cd /home/esg/easy-esg
+sudo cp deploy/nginx/esg.conf /etc/nginx/sites-available/esg
+sudo ln -sf /etc/nginx/sites-available/esg /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
 
-   ```bash
-   cd /home/esg/easy-esg
-   sed -i 's/你的域名.com/你的实际域名.com/g' deploy/nginx/esg.conf
-   sudo cp deploy/nginx/esg.conf /etc/nginx/sites-available/esg
-   sudo ln -sf /etc/nginx/sites-available/esg /etc/nginx/sites-enabled/
-   ```
-
-2. **若无域名、仅用 IP 访问**：先复制配置后，把 `server_name` 改为 `_`（表示接受任意域名/IP 访问），例如：
-
-   ```bash
-   sudo cp deploy/nginx/esg.conf /etc/nginx/sites-available/esg
-   sudo sed -i 's/server_name 你的域名.com www.你的域名.com;/server_name _;/' /etc/nginx/sites-available/esg
-   sudo ln -sf /etc/nginx/sites-available/esg /etc/nginx/sites-enabled/
-   ```
-   完成后可通过 **http://139.196.89.245** 访问。
-
-3. **若保留 Nginx 默认站点（不删 default）**：让 ESG 使用其他端口（如 8080），80 仍显示 “Welcome to nginx!”：
-
-   ```bash
-   sudo cp deploy/nginx/esg-8080.conf /etc/nginx/sites-available/esg
-   sudo ln -sf /etc/nginx/sites-available/esg /etc/nginx/sites-enabled/
-   sudo nginx -t && sudo systemctl reload nginx
-   ```
-   - 访问 ESG：**http://139.196.89.245:8080**
-   - 阿里云安全组需放行 **8080**（入方向 TCP 8080）。
-
-4. 检查并重载 Nginx：
-
-   ```bash
-   sudo nginx -t
-   sudo systemctl reload nginx
-   ```
-
-此时应能通过 **http://你的域名** 或 **http://139.196.89.245**（或使用 8080 方案时 **http://139.196.89.245:8080**）访问。
+完成后通过 **http://139.196.89.245:8080** 访问。
 
 ---
 
 ## 六、HTTPS（可选）
 
-若已配置域名且 80 端口可访问，可申请免费证书：
-
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d 你的域名.com -d www.你的域名.com
-```
-
-按提示选择是否将 HTTP 重定向到 HTTPS。之后可通过 **https://你的域名** 访问。
+若已配置域名且 8080 可访问，可申请免费证书（需在 Nginx 中为 8080 配置域名后使用 certbot）。
 
 ---
 
@@ -281,8 +246,7 @@ sudo systemctl restart esg-app
 | 路径 | 说明 |
 |------|------|
 | `deploy/systemd/esg-app.service` | systemd 服务单元模板，需替换项目目录与运行用户后复制到 `/etc/systemd/system/` |
-| `deploy/nginx/esg.conf` | Nginx 站点配置模板（80 端口），需替换域名后复制到 `/etc/nginx/sites-available/` |
-| `deploy/nginx/esg-8080.conf` | Nginx 站点配置（8080 端口），与 default 共存，不占 80；安全组需放行 8080 |
+| `deploy/nginx/esg.conf` | Nginx 配置（8080 端口），安全组需放行 8080 |
 | `deploy/scripts/update.sh` | 服务器端一键更新脚本（git pull + 安装依赖 + 重启服务） |
 
 ---

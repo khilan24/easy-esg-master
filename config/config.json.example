@@ -1,0 +1,1 @@
+{"provider":"gemini","gemini":{"api_key":"YOUR_GEMINI_API_KEY","api_keys":{"E":"YOUR_GEMINI_KEY_FOR_E","S":"YOUR_GEMINI_KEY_FOR_S","G":"YOUR_GEMINI_KEY_FOR_G"},"agent":"deep-research-pro-preview-12-2025","model":"gemini-3-pro-preview"},"qwen":{"api_key":"YOUR_QWEN_API_KEY","model":"qwen3-max-preview","deep_research_model":"qwen-deep-research"}}
