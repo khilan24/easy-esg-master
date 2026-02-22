@@ -22,6 +22,9 @@ ENV/
 # 输出文件夹（所有输出文件都在这里）
 output/
 
+# 自动更新日志
+logs/
+
 # 临时文件
 temp_template_unpacked/
 temp_ppt_unpacked/

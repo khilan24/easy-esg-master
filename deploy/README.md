@@ -229,6 +229,28 @@ pip install -r requirements.txt
 sudo systemctl restart esg-app
 ```
 
+### 方式三：定时自动更新（仅在有新提交时重启）
+
+每 5 分钟检查一次，仅当远程有新提交时才拉取并重启，减少无意义重启：
+
+```bash
+cd /home/esg/easy-esg
+chmod +x deploy/scripts/auto-update.sh
+crontab -e
+```
+
+在 **esg 用户**的 crontab 中添加（`crontab -u esg -e` 或以 esg 登录后 `crontab -e`）：
+
+```
+*/5 * * * * /home/esg/easy-esg/deploy/scripts/auto-update.sh >> /home/esg/easy-esg/logs/auto-update.log 2>&1
+```
+
+首次使用需：`mkdir -p /home/esg/easy-esg/logs`。esg 用户需有免密执行 `sudo systemctl restart esg-app` 的权限，可在 root 下执行 `visudo` 添加：
+
+```
+esg ALL=(ALL) NOPASSWD: /bin/systemctl restart esg-app
+```
+
 ---
 
 ## 八、私有 GitHub 仓库
@@ -248,6 +270,7 @@ sudo systemctl restart esg-app
 | `deploy/systemd/esg-app.service` | systemd 服务单元模板，需替换项目目录与运行用户后复制到 `/etc/systemd/system/` |
 | `deploy/nginx/esg.conf` | Nginx 配置（8080 端口），安全组需放行 8080 |
 | `deploy/scripts/update.sh` | 服务器端一键更新脚本（git pull + 安装依赖 + 重启服务） |
+| `deploy/scripts/auto-update.sh` | 定时自动更新（仅在有新提交时拉取并重启，配合 cron 每 5 分钟） |
 
 ---
 
