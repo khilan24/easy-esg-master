@@ -187,6 +187,13 @@ def get_output_subdir(date_info):
     return os.path.join(OUTPUT_BASE, report_type)
 
 
+def get_template_path(ext):
+    """返回 Word(.docx) 或 PPT(.pptx) 模板路径，优先 templates/ 再根目录。"""
+    name = "ESG研报模板" + (".docx" if ext in ("docx", ".docx") else ".pptx")
+    p = os.path.join("templates", name)
+    return p if os.path.exists(p) else name
+
+
 def get_latest_output_subdir(base_dir=None):
     """
     在 output 下查找「最近一次生成」的目录：比较 weekly/ 与 daily/ 内文件最新修改时间。
@@ -201,7 +208,7 @@ def get_latest_output_subdir(base_dir=None):
         kind_dir = base / kind
         if not kind_dir.is_dir():
             continue
-        mtime = max((f.stat().st_mtime for f in kind_dir.iterdir() if f.is_file()), default=0)
+        mtime = max((f.stat().st_mtime for f in kind_dir.rglob("*") if f.is_file()), default=0)
         if mtime > best_mtime:
             best_mtime = mtime
             best_subdir = kind
@@ -239,6 +246,7 @@ def find_latest_report_json(base_dir=None):
 def list_output_files_in_subdir(subdir_rel, base_dir=None):
     """
     列出指定目录下的文件，返回相对 base_dir 的路径列表，用于下载等。
+    支持嵌套子目录（如 weekly/20260119_gemini/xxx.pptx）。
     subdir_rel: "weekly" 或 "daily"
     返回: [('最终版.docx', 'weekly/最终版.docx'), ...]
     """
@@ -247,10 +255,14 @@ def list_output_files_in_subdir(subdir_rel, base_dir=None):
     if not folder.is_dir():
         return []
     out = []
-    for f in folder.iterdir():
+    seen = set()
+    for f in folder.rglob("*"):
         if f.is_file() and not f.name.startswith("~$"):
             rel = f.relative_to(base)
-            out.append((f.name, str(rel).replace("\\", "/")))
+            rel_str = str(rel).replace("\\", "/")
+            if rel_str not in seen:
+                seen.add(rel_str)
+                out.append((f.name, rel_str))
     return out
 
 

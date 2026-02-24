@@ -18,6 +18,12 @@ from flask import Flask, jsonify, render_template, request, send_file
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
+# 确保工作目录为项目根（本地或 gunicorn 均生效）
+try:
+    os.chdir(PROJECT_ROOT)
+except Exception:
+    pass
+
 try:
     from core.utils import get_latest_output_subdir, list_output_files_in_subdir
 except ImportError:
@@ -161,51 +167,38 @@ def _run_pipeline(mode="weekly", provider=None, api_key=None, api_keys=None, job
             pass
         return
 
-    files = []
-    base_dir = job_output_dir
-    if base_dir.exists() and get_latest_output_subdir and list_output_files_in_subdir:
-        subdir = get_latest_output_subdir(base_dir)
-        if subdir:
-            for name, rel_path in list_output_files_in_subdir(subdir, base_dir):
-                is_docx = (name.endswith("_最终版.docx") or (name.startswith("最终版") and name.endswith(".docx")))
-                is_pptx = (name.endswith("_最终版.pptx") or (name.startswith("最终版") and name.endswith(".pptx")))
-                is_json = (name.endswith("_报告.json") or (name.startswith("报告") and name.endswith(".json")) or (name.endswith(".json") and "_报告" in name))
-                is_txt = (name.endswith("_原始内容.txt") or (name.startswith("原始内容") and name.endswith(".txt")) or (name.endswith(".txt") and "_原始内容" in name))
-                if is_docx or is_pptx or is_json or is_txt:
-                    # 下载路径：带 job_id 前缀，便于 /api/download 解析
-                    path_for_download = f"{job_id}/{rel_path}" if job_id else rel_path
-                    files.append({"name": name, "path": path_for_download})
-        if not files:
+    def _collect_from_dir(base_dir, path_prefix):
+        _suffixes = ("_最终版.docx", "_最终版.pptx", "_报告.json", "_原始内容.txt")
+        """从 base_dir 收集输出文件（每种类型取最新一个），path_prefix 为下载路径前缀。"""
+        out = []
+        if not base_dir.exists():
+            return out
+        if get_latest_output_subdir and list_output_files_in_subdir:
+            subdir = get_latest_output_subdir(base_dir)
+            if subdir:
+                for name, rel_path in list_output_files_in_subdir(subdir, base_dir):
+                    if any(name.endswith(s) for s in _suffixes):
+                        path_for_download = f"{path_prefix}/{rel_path}".lstrip("/") if path_prefix else rel_path
+                        out.append({"name": name, "path": path_for_download})
+        if not out:
             for subdir_name in ["weekly", "daily"]:
                 subdir_path = base_dir / subdir_name
-                if subdir_path.exists() and subdir_path.is_dir():
-                    for pattern, check_func in [
-                        ("*_最终版.docx", lambda n: n.endswith("_最终版.docx") or (n.startswith("最终版") and n.endswith(".docx"))),
-                        ("*_最终版.pptx", lambda n: n.endswith("_最终版.pptx") or (n.startswith("最终版") and n.endswith(".pptx"))),
-                        ("*_报告.json", lambda n: n.endswith("_报告.json") or (n.startswith("报告") and n.endswith(".json")) or ("_报告" in n and n.endswith(".json"))),
-                        ("*_原始内容.txt", lambda n: n.endswith("_原始内容.txt") or (n.startswith("原始内容") and n.endswith(".txt")) or ("_原始内容" in n and n.endswith(".txt"))),
-                    ]:
-                        for p in sorted(subdir_path.glob(pattern), key=lambda x: x.stat().st_mtime, reverse=True)[:1]:
-                            if check_func(p.name):
-                                rel_path = f"{subdir_name}/{p.name}"
-                                path_for_download = f"{job_id}/{rel_path}" if job_id else rel_path
-                                files.append({"name": p.name, "path": path_for_download})
-        if not files:
-            with _jobs_lock:
-                j = _jobs.get(job_id, {})
-            label = j.get("last_report_label") if j else None
-            if label:
-                for subdir_name in ["weekly", "daily"]:
-                    subdir_path = base_dir / subdir_name
-                    if not subdir_path.is_dir():
-                        continue
-                    for suffix in ["_最终版.docx", "_最终版.pptx", "_报告.json", "_原始内容.txt"]:
-                        for p in sorted(subdir_path.glob(f"*{suffix}"), key=lambda x: x.stat().st_mtime, reverse=True)[:1]:
-                            if p.is_file():
-                                rel_path = f"{subdir_name}/{p.name}"
-                                path_for_download = f"{job_id}/{rel_path}" if job_id else rel_path
-                                files.append({"name": p.name, "path": path_for_download})
-                                break
+                if not subdir_path.is_dir():
+                    continue
+                for suffix in _suffixes:
+                    candidates = sorted(subdir_path.glob(f"**/*{suffix}"), key=lambda x: x.stat().st_mtime, reverse=True)
+                    if candidates:
+                        p = candidates[0]
+                        rel_path = str(p.relative_to(base_dir)).replace("\\", "/")
+                        path_for_download = f"{path_prefix}/{rel_path}".lstrip("/") if path_prefix else rel_path
+                        out.append({"name": p.name, "path": path_for_download})
+                if out:
+                    break
+        return out
+
+    files = _collect_from_dir(job_output_dir, job_id or "")
+    if not files:
+        files = _collect_from_dir(OUTPUT_DIR, "")
 
     with _jobs_lock:
         if job_id in _jobs:

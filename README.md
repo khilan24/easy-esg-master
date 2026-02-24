@@ -86,15 +86,18 @@ python main.py --mode daily --provider qwen
 - `--mode` / `-m`：`weekly`（周报）或 `daily`（日报）
 - `--provider` / `-p`：`gemini` 或 `qwen`，不传则使用 config 中的 `provider`
 
-### 3. 单独填充 Word
+### 3. 仅填充（每次输出 txt、json、word、pptx）
 
-若已有 JSON 报告，可只跑 Word 填充：
+若已有 JSON 报告，可只跑模板填充；**每次运行均保证输出四类文件**：`*_原始内容.txt`、`*_报告.json`、`*_最终版.docx`、`*_最终版.pptx`。固定使用 `templates/` 下的国信模板。
 
 ```bash
 python scripts/fill_template.py --json output/daily/YYYYMMDD_报告.json
+python scripts/fill_template.py   # 自动查找最新 JSON，并填充 Word + PPT
 ```
 
-不指定 `--json` 时会在 `output/weekly/`、`output/daily/` 下自动查找最新 `*_报告.json`。模板默认从 `templates/` 或根目录读取。
+- `--json`：JSON 路径，不传则自动查找最新 `*_报告.json`
+
+不指定 `--json` 时会在 `output/weekly/`、`output/daily/` 下自动查找最新 `*_报告.json`。若输出目录缺少 `*_原始内容.txt`，脚本会从同类型目录复制或创建占位文件。
 
 ## 输出目录与文件
 
@@ -103,7 +106,7 @@ python scripts/fill_template.py --json output/daily/YYYYMMDD_报告.json
 | 周报 | `output/weekly/` | `*_原始内容.txt`、`*_报告.json`、`*_最终版.docx`、`*_最终版.pptx` |
 | 日报 | `output/daily/` | `*_原始内容.txt`、`*_报告.json`、`*_最终版.docx`、`*_最终版.pptx` |
 
-文件名以日期开头，便于排序与归档。PPT 需在 `templates/` 或根目录放置 `ESG研报模板.pptx` 才会生成。
+文件名以日期开头，便于排序与归档。需在 `templates/` 下放置国信模板 `ESG研报模板.docx`、`ESG研报模板.pptx`。
 
 ## 项目结构
 
@@ -111,12 +114,11 @@ python scripts/fill_template.py --json output/daily/YYYYMMDD_报告.json
 easy-esg-master/
 ├── main.py                 # 主程序（--mode weekly|daily，--provider gemini|qwen）
 ├── requirements.txt
-├── render.yaml             # Render 云部署配置
 ├── config/                 # 配置
 │   └── config.json.example
 ├── templates/              # Word/PPT 模板（ESG研报模板.docx、ESG研报模板.pptx）
 ├── scripts/                # 命令行脚本
-│   └── fill_template.py   # Word 填充
+│   └── fill_template.py   # Word + PPT 填充（每次输出 txt/json/docx/pptx）
 ├── core/                   # 核心逻辑
 │   ├── gemini_client.py    # Gemini API（Deep Research + 对话）
 │   ├── qwen_client.py      # 千问 API（Deep Research + 对话）
@@ -148,7 +150,7 @@ easy-esg-master/
     └── daily/              # 日报输出
 ```
 
-`.cursor/skills/` 为 Cursor IDE 技能与参考，用于 AI 辅助开发，已纳入仓库。
+- `.cursor/skills/` 为 Cursor IDE 技能与参考，用于 AI 辅助开发，已纳入仓库。
 
 ## 部署（阿里云）
 

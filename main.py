@@ -16,6 +16,7 @@ from core import (
     get_date_range_for_mode,
     get_output_subdir,
     get_output_date_suffix,
+    get_template_path,
     safe_print,
     ResearchPipeline,
 )
@@ -131,24 +132,22 @@ def main():
         safe_print("阶段5：填充 Word 与 PPT 模板")
         safe_print("=" * 60)
         try:
-            word_tpl = Path("templates/ESG研报模板.docx")
-            if not word_tpl.exists():
-                word_tpl = Path("ESG研报模板.docx")
+            word_tpl = get_template_path("docx")
             fill_success, word_output = fill_word_template(
                 json_path=formatted_filename,
-                template_path=str(word_tpl),
+                template_path=word_tpl,
                 output_path=os.path.join(word_output_dir, f"{date_suffix}_最终版.docx"),
             )
-            ppt_success, ppt_output = False, None
-            ppt_template = Path("templates/ESG研报模板.pptx") if Path("templates/ESG研报模板.pptx").exists() else Path("ESG研报模板.pptx")
-            if ppt_template.exists():
+            ppt_tpl = get_template_path("pptx")
+            ppt_success, ppt_output = (False, None)
+            if os.path.exists(ppt_tpl):
                 ppt_success, ppt_output = fill_ppt_template(
                     json_path=formatted_filename,
-                    template_path=str(ppt_template),
+                    template_path=ppt_tpl,
                     output_path=os.path.join(word_output_dir, f"{date_suffix}_最终版.pptx"),
                 )
             else:
-                safe_print(f"\n[跳过] PPT 模板不存在 ({ppt_template})，仅生成 Word")
+                safe_print(f"\n[警告] PPT 模板不存在（{ppt_tpl}），请将国信模板放到 templates/ESG研报模板.pptx")
 
             if fill_success:
                 completed_stages = end_stage("stage5", "Word 与 PPT 填充", completed_stages)

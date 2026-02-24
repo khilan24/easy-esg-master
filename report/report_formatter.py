@@ -6,18 +6,31 @@ import re
 
 
 def normalize_newlines(text):
-    """规范化换行符：将所有多个连续的换行符统一为单个换行符
-    """
+    """规范化换行符：将 3 个及以上连续换行压成 2 个，保留 1 个空行；其余不变。"""
     if not text:
         return text
-    
-    # 将所有多个连续的换行符统一为单个换行符
-    normalized = re.sub(r'\n+', '\n', text)
-    
-    # 清理开头和结尾的多余换行符
-    normalized = normalized.strip()
-    
-    return normalized
+    normalized = re.sub(r'\n{3,}', '\n\n', text)
+    return normalized.strip()
+
+
+def normalize_source_block(text):
+    """
+    资料来源块规范化（供报告解析与填充共用）：
+    1. 去掉「资料来源」前所有形式的 "---"（含整行仅短线、行首短线等）
+    2. 保证「资料来源」及后续内容始终在单独一段：前有换行，不接在前文后面
+    """
+    if not text or '资料来源' not in text:
+        return text
+    # 去掉紧挨在「资料来源」前的任意短线与空白（含 ---、----、---\n 等）
+    text = re.sub(r'[\r\n\s]*\-+\s*资料来源', '\n\n资料来源', text)
+    # 若「资料来源」紧接在非换行字符后，则插入空行
+    text = re.sub(r'([^\n\r])资料来源', r'\1\n\n资料来源', text)
+    # 将「资料来源」前的多个换行统一为两个（一段空行）
+    text = re.sub(r'\n+资料来源', '\n\n资料来源', text)
+    # 去掉整行仅由短线/空格组成的行
+    lines = [L for L in text.split('\n') if not re.match(r'^[\s\-]+$', L.strip())]
+    text = '\n'.join(lines)
+    return normalize_newlines(text)
 
 
 def is_source_line(text):
@@ -316,13 +329,21 @@ def parse_section_content(section_text, domain_name):
         
         for line in content_lines:
             line_stripped = line.strip()
-            if is_source_line(line_stripped):
-                source_lines.append(line_stripped)
-            else:
+            # 去掉行首的 "---" 再判断，并跳过仅由短线/空格组成的行
+            line_no_dash = re.sub(r'^\-+\s*', '', line_stripped)
+            if not line_stripped:
                 content_lines_clean.append(line)
+            elif re.match(r'^[\s\-]+$', line_stripped):
+                continue
+            elif is_source_line(line_no_dash):
+                source_lines.append(line_no_dash)
+            elif line_no_dash:
+                # 去掉行尾的 "---"，避免正文末尾残留
+                content_lines_clean.append(re.sub(r'\-+\s*$', '', line_no_dash))
         
-        # 重新组合：先内容，后资料来源
+        # 重新组合：先内容，后资料来源（去掉末尾的 ---）
         clean_content = '\n'.join(content_lines_clean).strip()
+        clean_content = re.sub(r'\n?\-+\s*$', '', clean_content).strip()
         
         # 格式化资料来源
         formatted_sources = []
@@ -338,16 +359,16 @@ def parse_section_content(section_text, domain_name):
             if extracted_source:
                 formatted_sources.append(extracted_source)
         
-        # 组合最终内容：先内容，后资料来源（单独成行）
+        # 组合最终内容：先内容，后资料来源（单独成行，不接在前文后面）
         if formatted_sources:
             source_text = '\n'.join(formatted_sources)
-            final_content = f"{clean_content}\n{source_text}" if clean_content else source_text
+            final_content = f"{clean_content}\n\n{source_text}" if clean_content else source_text
         else:
             # 如果确实没有资料来源，保留原内容（但这种情况应该很少）
             final_content = clean_content if clean_content else content
         
-        # 规范化换行符：清理多余的换行符
-        final_content = normalize_newlines(final_content)
+        # 最终规范化：去掉残留 "---"，保证「资料来源」前换行、单独成行
+        final_content = normalize_source_block(final_content)
         
         filtered_items.append({
             "title": title,

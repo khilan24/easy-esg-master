@@ -28,3 +28,4 @@ logs/
 # 临时文件
 temp_template_unpacked/
 temp_ppt_unpacked/
+_temp_ppt_trim_*/

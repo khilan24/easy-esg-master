@@ -119,6 +119,28 @@ def replace_placeholder_in_xml(xml_content, placeholder, replacement):
     return xml_content, False
 
 
+def _normalize_news_content_for_output(text):
+    """
+    新闻内容专用清洗：去掉「资料来源」前的 "---"，并保证「资料来源」及后续链接单独成行（前有换行）。
+    填充到 Word/PPT 时保留「资料来源」前的空行，不压成单换行。
+    """
+    if not text:
+        return ""
+    try:
+        from report.report_formatter import normalize_source_block
+        text = normalize_source_block(str(text))
+    except Exception:
+        text = str(text)
+    text = text.strip('\n\r \t')
+    idx = text.find("资料来源")
+    if idx == -1:
+        return re.sub(r'\n{2,}', '\n', text)
+    before = text[:idx].strip()
+    after = text[idx:]
+    before = re.sub(r'\n{2,}', '\n', before)
+    return before + "\n\n" + after
+
+
 def build_replacements(report_data, max_news_per_section=8):
     """构建替换字典"""
     replacements = {}
@@ -151,7 +173,8 @@ def build_replacements(report_data, max_news_per_section=8):
         for i in range(1, min(actual_count, max_news_per_section) + 1):
             news = news_items[i - 1]
             replacements[f'{section_name_cn}新闻标题{i}'] = clean_text(news.get('title'))
-            replacements[f'{section_name_cn}新闻内容{i}'] = clean_text(news.get('content'))
+            # 新闻内容：去掉 ---，并保留「资料来源」前换行，使资料来源及链接单独成行
+            replacements[f'{section_name_cn}新闻内容{i}'] = _normalize_news_content_for_output(news.get('content'))
     
     return replacements
 
